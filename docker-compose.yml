@@ -5,7 +5,7 @@ services:
     build: .
     container_name: ${CONTAINER_NAME:-med-reminder-app}
     ports:
-      - "${HOST:-0.0.0.0}:${PORT:-3000}:${PORT:-3000}"
+      - "${PORT:-3000}:${PORT:-3000}"
     volumes:
       - ./data:/app/data
       - ./config:/app/config

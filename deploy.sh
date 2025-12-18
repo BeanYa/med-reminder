@@ -94,23 +94,29 @@ if ! command -v docker-compose &> /dev/null && ! docker compose version &> /dev/
     exit 1
 fi
 
+# 选择合适的 compose 文件
+COMPOSE_FILE="docker-compose.yml"
+if [ "$ENVIRONMENT" = "production" ]; then
+    COMPOSE_FILE="docker-compose.prod.yml"
+fi
+
 # 停止并删除现有容器（如果存在）
 echo
 echo "清理现有容器..."
-docker-compose down --remove-orphans 2>/dev/null || true
+docker-compose -f $COMPOSE_FILE down --remove-orphans 2>/dev/null || true
 
 # 构建新镜像
 echo
 echo "构建应用镜像..."
-PORT=$PORT HOST=$HOST NODE_ENV=$ENVIRONMENT docker-compose build
+PORT=$PORT HOST=$HOST NODE_ENV=$ENVIRONMENT docker-compose -f $COMPOSE_FILE build
 
 # 启动服务
 echo
 echo "启动应用服务..."
 if docker-compose version &> /dev/null; then
-    PORT=$PORT HOST=$HOST NODE_ENV=$ENVIRONMENT docker-compose up -d
+    PORT=$PORT HOST=$HOST NODE_ENV=$ENVIRONMENT docker-compose -f $COMPOSE_FILE up -d
 else
-    PORT=$PORT HOST=$HOST NODE_ENV=$ENVIRONMENT docker compose up -d
+    PORT=$PORT HOST=$HOST NODE_ENV=$ENVIRONMENT docker compose -f $COMPOSE_FILE up -d
 fi
 
 # 等待服务启动

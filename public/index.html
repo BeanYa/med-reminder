@@ -495,7 +495,7 @@
 
         // 显示药品列表
         function showMedicationList() {
-            alert('药品管理功能开发中...');
+            showMedicationListModal();
         }
 
         // 页面加载时初始化
@@ -504,6 +504,415 @@
             // 每分钟刷新一次
             setInterval(loadTodayStatus, 60000);
         });
+        // 显示药品列表模态框
+        async function showMedicationListModal() {
+            document.getElementById('medication-list-modal').style.display = 'block';
+            await loadMedicationList();
+        }
+
+        // 加载药品列表
+        async function loadMedicationList() {
+            try {
+                const response = await fetch('/api/medications');
+                const data = await response.json();
+
+                if (data.success && data.data.length > 0) {
+                    const html = data.data.map(med => `
+                        <div class="medication-item">
+                            <div class="medication-info">
+                                <div class="medication-name">${med.name}</div>
+                                <div class="medication-dosage">${med.dosage}${med.unit} - ${med.frequency}次/天</div>
+                                <div style="font-size: 0.85rem; color: #666;">
+                                    时段: ${med.breakfast ? '早餐' : ''} ${med.lunch ? '中餐' : ''} ${med.dinner ? '晚餐' : ''} - ${med.timing}
+                                </div>
+                            </div>
+                            <button class="btn btn-primary" onclick="editMedication(${med.id})">编辑</button>
+                        </div>
+                    `).join('');
+                    document.getElementById('medication-list').innerHTML = html;
+                } else {
+                    document.getElementById('medication-list').innerHTML = '<p>暂无药品</p>';
+                }
+            } catch (error) {
+                console.error('加载药品列表失败:', error);
+                document.getElementById('medication-list').innerHTML = '<p>加载失败</p>';
+            }
+        }
+
+        // 编辑药品
+        async function editMedication(id) {
+            try {
+                const response = await fetch(`/api/medications/${id}`);
+                const data = await response.json();
+
+                if (data.success) {
+                    const med = data.data;
+                    document.getElementById('edit-medication-id').value = med.id;
+                    document.getElementById('edit-name').value = med.name;
+                    document.getElementById('edit-dosage').value = med.dosage;
+                    document.getElementById('edit-unit').value = med.unit;
+                    document.getElementById('edit-frequency').value = med.frequency;
+                    document.getElementById('edit-breakfast').checked = med.breakfast;
+                    document.getElementById('edit-lunch').checked = med.lunch;
+                    document.getElementById('edit-dinner').checked = med.dinner;
+                    document.getElementById('edit-timing').value = med.timing;
+
+                    closeModal('medication-list-modal');
+                    document.getElementById('edit-medication-modal').style.display = 'block';
+                }
+            } catch (error) {
+                console.error('加载药品信息失败:', error);
+                alert('加载药品信息失败');
+            }
+        }
+
+        // 更新编辑表单的用餐时段选项
+        function updateEditMealOptions() {
+            const frequency = document.getElementById('edit-frequency').value;
+            const breakfast = document.getElementById('edit-breakfast');
+            const lunch = document.getElementById('edit-lunch');
+            const dinner = document.getElementById('edit-dinner');
+
+            breakfast.disabled = false;
+            lunch.disabled = false;
+            dinner.disabled = false;
+
+            if (frequency === '3') {
+                breakfast.checked = true;
+                lunch.checked = true;
+                dinner.checked = true;
+                breakfast.disabled = true;
+                lunch.disabled = true;
+                dinner.disabled = true;
+            }
+        }
+
+        // 编辑药品表单提交
+        document.getElementById('edit-medication-form').addEventListener('submit', async (e) => {
+            e.preventDefault();
+
+            const formData = new FormData(e.target);
+            const medication = {
+                name: formData.get('name'),
+                dosage: parseFloat(formData.get('dosage')),
+                unit: formData.get('unit'),
+                frequency: parseInt(formData.get('frequency')),
+                breakfast: formData.get('breakfast') === 'true',
+                lunch: formData.get('lunch') === 'true',
+                dinner: formData.get('dinner') === 'true',
+                timing: formData.get('timing')
+            };
+
+            const id = formData.get('id');
+
+            try {
+                const response = await fetch(`/api/medications/${id}`, {
+                    method: 'PUT',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify(medication)
+                });
+                const data = await response.json();
+
+                if (data.success) {
+                    alert('药品更新成功！');
+                    closeModal('edit-medication-modal');
+                    loadTodayStatus();
+                } else {
+                    alert('更新失败：' + data.error);
+                }
+            } catch (error) {
+                console.error('更新失败:', error);
+                alert('更新失败：网络错误');
+            }
+        });
+
+        // 删除药品
+        async function deleteMedication() {
+            const id = document.getElementById('edit-medication-id').value;
+
+            if (!confirm('确定要删除这个药品吗？\n注意：删除后历史记录仍会保留。')) {
+                return;
+            }
+
+            try {
+                const response = await fetch(`/api/medications/${id}`, {
+                    method: 'DELETE'
+                });
+                const data = await response.json();
+
+                if (data.success) {
+                    alert('药品删除成功！');
+                    closeModal('edit-medication-modal');
+                    loadTodayStatus();
+                } else {
+                    alert('删除失败：' + data.error);
+                }
+            } catch (error) {
+                console.error('删除失败:', error);
+                alert('删除失败：网络错误');
+            }
+        }
+
+        // 显示数据统计
+        function showStatistics() {
+            document.getElementById('statistics-modal').style.display = 'block';
+        }
+
+        // 加载7天统计
+        async function loadSevenDayStatistics() {
+            try {
+                const response = await fetch('/api/statistics/seven-days');
+                const data = await response.json();
+
+                if (data.success) {
+                    const stats = data.data;
+                    let html = '<h3>过去7天用药统计</h3>';
+
+                    if (stats.length === 0) {
+                        html += '<p>暂无数据</p>';
+                    } else {
+                        html += '<div class="stats-grid">';
+                        stats.forEach(stat => {
+                            html += `
+                                <div class="stat-card">
+                                    <h4>${stat.date}</h4>
+                                    <div class="progress-bar">
+                                        <div class="progress-fill" style="width: ${stat.completionRate}%"></div>
+                                    </div>
+                                    <p>完成率: ${stat.completionRate}%</p>
+                                    <p>已服用: ${stat.taken}/${stat.total}</p>
+                                </div>
+                            `;
+                        });
+                        html += '</div>';
+                    }
+
+                    document.getElementById('statistics-data').innerHTML = html;
+                }
+            } catch (error) {
+                console.error('加载统计失败:', error);
+                alert('加载统计失败');
+            }
+        }
+
+        // 显示通知设置
+        function showNotificationSettings() {
+            document.getElementById('notification-settings-modal').style.display = 'block';
+            loadNotificationStatus();
+        }
+
+        // 加载通知状态
+        async function loadNotificationStatus() {
+            try {
+                const response = await fetch('/api/statistics/notifications/status');
+                const data = await response.json();
+
+                if (data.success) {
+                    const status = data.data;
+                    document.getElementById('notification-status').innerHTML = status.enabled
+                        ? '<span style="color: green;">✅ 通知已启用</span>'
+                        : '<span style="color: red;">❌ 通知已禁用</span>';
+                }
+            } catch (error) {
+                console.error('加载通知状态失败:', error);
+            }
+        }
+
+        // 测试通知
+        async function testNotification() {
+            try {
+                const response = await fetch('/api/statistics/notifications/test', {
+                    method: 'POST'
+                });
+                const data = await response.json();
+
+                if (data.success) {
+                    alert('测试通知已发送，请检查系统通知');
+                } else {
+                    alert('测试失败：' + data.error);
+                }
+            } catch (error) {
+                console.error('测试失败:', error);
+                alert('测试失败：网络错误');
+            }
+        }
+
+        // 切换通知状态
+        async function toggleNotifications() {
+            try {
+                const statusResponse = await fetch('/api/statistics/notifications/status');
+                const statusData = await statusResponse.json();
+
+                if (statusData.success) {
+                    const isEnabled = statusData.data.enabled;
+                    const endpoint = isEnabled ? 'disable' : 'enable';
+
+                    const response = await fetch(`/api/statistics/notifications/${endpoint}`, {
+                        method: 'POST'
+                    });
+                    const data = await response.json();
+
+                    if (data.success) {
+                        alert(data.message);
+                        loadNotificationStatus();
+                    } else {
+                        alert('操作失败：' + data.error);
+                    }
+                }
+            } catch (error) {
+                console.error('操作失败:', error);
+                alert('操作失败：网络错误');
+            }
+        }
+
+        // 页面加载时初始化
+        document.addEventListener('DOMContentLoaded', () => {
+            // 在操作按钮区域添加统计按钮
+            const actionsDiv = document.querySelector('.actions');
+            const statsButton = document.createElement('button');
+            statsButton.className = 'btn btn-primary';
+            statsButton.textContent = '数据统计';
+            statsButton.onclick = showStatistics;
+            actionsDiv.appendChild(statsButton);
+
+            loadTodayStatus();
+            // 每分钟刷新一次
+            setInterval(loadTodayStatus, 60000);
+        });
     </script>
+
+    <!-- 药品列表模态框 -->
+    <div id="medication-list-modal" class="modal">
+        <div class="modal-content">
+            <span class="close" onclick="closeModal('medication-list-modal')">&times;</span>
+            <h2>药品管理</h2>
+            <div id="medication-list">
+                <p>加载中...</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- 编辑药品模态框 -->
+    <div id="edit-medication-modal" class="modal">
+        <div class="modal-content">
+            <span class="close" onclick="closeModal('edit-medication-modal')">&times;</span>
+            <h2>编辑药品</h2>
+            <form id="edit-medication-form">
+                <input type="hidden" id="edit-medication-id" name="id">
+                <div class="form-group">
+                    <label for="edit-name">药品名称</label>
+                    <input type="text" id="edit-name" name="name" required>
+                </div>
+                <div class="form-group">
+                    <label for="edit-dosage">剂量</label>
+                    <input type="number" id="edit-dosage" name="dosage" step="0.1" required>
+                </div>
+                <div class="form-group">
+                    <label for="edit-unit">单位</label>
+                    <select id="edit-unit" name="unit" required>
+                        <option value="片">片</option>
+                        <option value="颗">颗</option>
+                        <option value="克">克</option>
+                        <option value="毫克">毫克</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label for="edit-frequency">服用频次</label>
+                    <select id="edit-frequency" name="frequency" required onchange="updateEditMealOptions()">
+                        <option value="1">1次/天</option>
+                        <option value="2">2次/天</option>
+                        <option value="3">3次/天</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label>服用时段</label>
+                    <div class="checkbox-group">
+                        <div class="checkbox-item">
+                            <input type="checkbox" id="edit-breakfast" name="breakfast" value="true">
+                            <label for="edit-breakfast">早餐</label>
+                        </div>
+                        <div class="checkbox-item">
+                            <input type="checkbox" id="edit-lunch" name="lunch" value="true">
+                            <label for="edit-lunch">中餐</label>
+                        </div>
+                        <div class="checkbox-item">
+                            <input type="checkbox" id="edit-dinner" name="dinner" value="true">
+                            <label for="edit-dinner">晚餐</label>
+                        </div>
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label for="edit-timing">服用方式</label>
+                    <select id="edit-timing" name="timing" required>
+                        <option value="餐后">餐后</option>
+                        <option value="餐前">餐前</option>
+                    </select>
+                </div>
+                <div style="display: flex; gap: 10px;">
+                    <button type="submit" class="btn btn-primary">保存修改</button>
+                    <button type="button" class="btn btn-danger" onclick="deleteMedication()">删除药品</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- 数据统计模态框 -->
+    <div id="statistics-modal" class="modal">
+        <div class="modal-content" style="max-width: 800px;">
+            <span class="close" onclick="closeModal('statistics-modal')">&times;</span>
+            <h2>用药统计</h2>
+            <div id="statistics-content">
+                <div style="text-align: center; margin: 20px 0;">
+                    <button class="btn btn-primary" onclick="loadSevenDayStatistics()">查看7天统计</button>
+                    <button class="btn btn-primary" onclick="showNotificationSettings()">通知设置</button>
+                </div>
+                <div id="statistics-data"></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 通知设置模态框 -->
+    <div id="notification-settings-modal" class="modal">
+        <div class="modal-content">
+            <span class="close" onclick="closeModal('notification-settings-modal')">&times;</span>
+            <h2>通知设置</h2>
+            <div class="form-group">
+                <label>通知状态</label>
+                <div id="notification-status"></div>
+            </div>
+            <div style="display: flex; gap: 10px; margin-top: 20px;">
+                <button class="btn btn-success" onclick="testNotification()">测试通知</button>
+                <button class="btn btn-danger" onclick="toggleNotifications()">切换通知状态</button>
+            </div>
+        </div>
+    </div>
+
+    <style>
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 15px;
+            margin-top: 20px;
+        }
+
+        .stat-card {
+            background: #f8f9fa;
+            padding: 15px;
+            border-radius: 8px;
+            text-align: center;
+        }
+
+        .stat-card h4 {
+            margin: 0 0 10px 0;
+            color: #333;
+        }
+
+        .stat-card p {
+            margin: 5px 0;
+            font-size: 0.9rem;
+        }
+    </style>
 </body>
 </html>

@@ -9,6 +9,10 @@ const database = require('./database/database');
 
 // 导入路由
 const medicationRoutes = require('./api/medicationRoutes');
+const statisticsRoutes = require('./api/statisticsRoutes');
+
+// 导入通知服务
+const NotificationService = require('./services/NotificationService');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -24,6 +28,7 @@ app.use(express.static(path.join(__dirname, '../public')));
 
 // API 路由
 app.use('/api/medications', medicationRoutes);
+app.use('/api/statistics', statisticsRoutes);
 
 // 健康检查
 app.get('/api/health', (req, res) => {
@@ -53,6 +58,10 @@ async function startServer() {
     await database.init();
     console.log('Database initialized successfully');
 
+    // 初始化通知服务
+    NotificationService.scheduleReminders();
+    console.log('Notification service initialized');
+
     // 启动服务器
     app.listen(PORT, () => {
       console.log(`Server is running on port ${PORT}`);
@@ -67,12 +76,14 @@ async function startServer() {
 // 优雅关闭
 process.on('SIGINT', () => {
   console.log('\nShutting down gracefully...');
+  NotificationService.cancelAllScheduledJobs();
   database.close();
   process.exit(0);
 });
 
 process.on('SIGTERM', () => {
   console.log('\nShutting down gracefully...');
+  NotificationService.cancelAllScheduledJobs();
   database.close();
   process.exit(0);
 });

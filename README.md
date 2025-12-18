@@ -34,26 +34,42 @@
 
 **Linux/macOS:**
 ```bash
+# 使用默认端口 3000
 ./start.sh
+
+# 指定端口（例如 8080）
+./start.sh --port 8080
 ```
 
 **Windows:**
 ```cmd
+# 使用默认端口 3000
 start.bat
+
+# 指定端口（例如 8080）
+start.bat --port 8080
 ```
 
-4. 打开浏览器访问 http://localhost:3000
+4. 打开浏览器访问 http://localhost:3000（或指定端口）
 
 ### 方式二：Docker 部署
 
 **Linux/macOS:**
 ```bash
+# 使用默认端口 3000
 ./deploy.sh
+
+# 指定端口（例如 8080）
+./deploy.sh --port 8080
 ```
 
 **Windows:**
 ```cmd
+# 使用默认端口 3000
 deploy.bat
+
+# 指定端口（例如 8080）
+deploy.bat --port 8080
 ```
 
 ## 项目结构

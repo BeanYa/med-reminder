@@ -3,15 +3,16 @@ version: '3.8'
 services:
   med-reminder:
     build: .
-    container_name: med-reminder-app
+    container_name: ${CONTAINER_NAME:-med-reminder-app}
     ports:
-      - "${PORT:-3000}:${PORT:-3000}"
+      - "${HOST:-0.0.0.0}:${PORT:-3000}:${PORT:-3000}"
     volumes:
       - ./data:/app/data
       - ./config:/app/config
     environment:
-      - NODE_ENV=production
+      - NODE_ENV=${NODE_ENV:-production}
       - PORT=${PORT:-3000}
+      - HOST=${HOST:-0.0.0.0}
     restart: unless-stopped
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:${PORT:-3000}/api/health"]

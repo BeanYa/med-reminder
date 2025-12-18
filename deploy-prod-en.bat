@@ -1,20 +1,19 @@
 @echo off
-chcp 65001 >nul
-REM Production Environment Deployment Script (Windows) - 生产环境部署脚本
+REM Production Environment Deployment Script (Windows)
 
 setlocal enabledelayedexpansion
 
-REM 默认生产配置
+REM Default production configuration
 set DEFAULT_PORT=3000
 set DEFAULT_HOST=0.0.0.0
 set DEFAULT_NAME=med-reminder-prod
 
-REM 初始化变量
+REM Initialize variables
 set PORT=%DEFAULT_PORT%
 set HOST=%DEFAULT_HOST%
 set CONTAINER_NAME=%DEFAULT_NAME%
 
-REM 解析命令行参数
+REM Parse command line arguments
 :parse_args
 if "%~1"=="" goto start_deploy
 if "%~1"=="-p" (

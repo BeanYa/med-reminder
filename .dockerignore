@@ -130,12 +130,17 @@ __tests__/
 *.test.js
 *.spec.js
 
-# Development scripts
+# Development scripts (excluding init-db script)
 start.sh
 start.bat
 deploy.sh
 deploy.bat
-scripts/
+deploy-prod.sh
+deploy-prod.bat
+deploy.ps1
+deploy-prod.ps1
+deploy-prod-en.bat
+scripts/run-tests.sh
 
 # Lock file (will be copied separately)
 package-lock.json

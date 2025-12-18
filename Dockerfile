@@ -1,35 +1,7 @@
-# 多阶段构建 - 构建阶段
-FROM node:18-alpine AS builder
+# 简化构建 - 直接使用一个阶段
+FROM node:18-alpine
 
-# 设置工作目录
-WORKDIR /app
-
-# 复制 package.json，先尝试复制 package-lock.json（如果存在）
-COPY package.json ./
-COPY package-lock.json* ./
-
-# 检查是否存在 package-lock.json，如果有则使用 npm ci，否则使用 npm install
-RUN if [ -f package-lock.json ]; then \
-        echo "Using package-lock.json for faster installation..." && \
-        npm ci --include=dev; \
-    else \
-        echo "package-lock.json not found, using npm install..." && \
-        npm install; \
-    fi
-
-# 复制应用源代码
-COPY src/ ./src/
-COPY public/ ./public/
-
-# 初始化数据库
-RUN mkdir -p /app/data && \
-    npm run init-db && \
-    chown -R 1001:1001 /app
-
-# 生产环境镜像
-FROM node:18-alpine AS production
-
-# 安装生产环境需要的工具
+# 安装系统依赖和创建用户
 RUN apk add --no-cache curl && \
     addgroup -g 1001 -S nodejs && \
     adduser -S medreminder -u 1001
@@ -41,22 +13,25 @@ WORKDIR /app
 COPY package.json ./
 COPY package-lock.json* ./
 
-# 检查是否存在 package-lock.json，如果有则使用 npm ci，否则使用 npm install
+# 只安装生产依赖
 RUN if [ -f package-lock.json ]; then \
         echo "Using package-lock.json for production installation..." && \
-        npm ci --omit=dev && \
+        npm ci --omit=dev --no-audit --no-fund && \
         npm cache clean --force; \
     else \
         echo "package-lock.json not found, using npm install..." && \
-        npm install --omit=dev && \
+        npm install --omit=dev --no-audit --no-fund && \
         npm cache clean --force; \
     fi
 
-# 从构建阶段复制应用文件
-COPY --from=builder --chown=medreminder:nodejs /app/src ./src
-COPY --from=builder --chown=medreminder:nodejs /app/public ./public
-COPY --from=builder --chown=medreminder:nodejs /app/data ./data
-COPY --from=builder --chown=medreminder:nodejs /app/node_modules ./node_modules
+# 复制应用源代码和脚本
+COPY --chown=medreminder:nodejs src/ ./src/
+COPY --chown=medreminder:nodejs public/ ./public/
+COPY --chown=medreminder:nodejs scripts/ ./scripts/
+
+# 创建数据目录
+RUN mkdir -p /app/data && \
+    chown -R medreminder:nodejs /app
 
 # 创建必要的目录
 RUN mkdir -p logs && \

@@ -3,7 +3,6 @@ services:
     build:
       context: .
       dockerfile: Dockerfile
-      target: production
     container_name: ${CONTAINER_NAME:-med-reminder-prod}
     ports:
       - "${PORT:-3000}:${PORT:-3000}"
@@ -17,6 +16,14 @@ services:
       - DB_PATH=/app/data/medications.db
       - LOG_FILE=/app/logs/app.log
       - LOG_LEVEL=${LOG_LEVEL:-info}
+    command: >
+      sh -c "
+        if [ ! -f /app/data/medications.db ]; then
+          echo 'Initializing database...'
+          npm run init-db
+        fi
+        node src/app.js
+      "
     restart: unless-stopped
     security_opt:
       - no-new-privileges:true

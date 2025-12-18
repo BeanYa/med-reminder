@@ -1,0 +1,19 @@
+{
+  "server": {
+    "port": 3000,
+    "host": "0.0.0.0"
+  },
+  "database": {
+    "path": "./data/medications.db"
+  },
+  "notifications": {
+    "breakfast": "08:00",
+    "lunch": "12:00",
+    "dinner": "18:00",
+    "enabled": true
+  },
+  "logging": {
+    "level": "debug",
+    "file": "./logs/app.log"
+  }
+}

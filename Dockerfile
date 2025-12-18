@@ -4,11 +4,18 @@ FROM node:18-alpine AS builder
 # 设置工作目录
 WORKDIR /app
 
-# 复制 package.json 和 package-lock.json
-COPY package.json package-lock.json ./
+# 复制 package.json，先尝试复制 package-lock.json（如果存在）
+COPY package.json ./
+COPY package-lock.json* ./
 
-# 安装所有依赖（包括开发依赖）
-RUN npm ci --include=dev
+# 检查是否存在 package-lock.json，如果有则使用 npm ci，否则使用 npm install
+RUN if [ -f package-lock.json ]; then \
+        echo "Using package-lock.json for faster installation..." && \
+        npm ci --include=dev; \
+    else \
+        echo "package-lock.json not found, using npm install..." && \
+        npm install; \
+    fi
 
 # 复制应用源代码
 COPY src/ ./src/
@@ -30,12 +37,20 @@ RUN apk add --no-cache curl && \
 # 设置工作目录
 WORKDIR /app
 
-# 复制 package.json 和 package-lock.json
-COPY package.json package-lock.json ./
+# 复制 package.json，先尝试复制 package-lock.json（如果存在）
+COPY package.json ./
+COPY package-lock.json* ./
 
-# 只安装生产依赖
-RUN npm ci --omit=dev && \
-    npm cache clean --force
+# 检查是否存在 package-lock.json，如果有则使用 npm ci，否则使用 npm install
+RUN if [ -f package-lock.json ]; then \
+        echo "Using package-lock.json for production installation..." && \
+        npm ci --omit=dev && \
+        npm cache clean --force; \
+    else \
+        echo "package-lock.json not found, using npm install..." && \
+        npm install --omit=dev && \
+        npm cache clean --force; \
+    fi
 
 # 从构建阶段复制应用文件
 COPY --from=builder --chown=medreminder:nodejs /app/src ./src
